@@ -3,6 +3,9 @@
 A Monte Carlo simulation tool that determines the equilibrium carbon credit prices needed to make forest conservation economically competitive with conventional land use (timber extraction, cattle ranching, and soybean farming) in the Brazilian Amazon rainforest.
 Available at https://forest-forever.streamlit.app/
 
+<img width="607" height="608" alt="image" src="https://github.com/user-attachments/assets/1c89fd58-46d7-4dd3-b53c-ea2f0e61f68a" />
+
+
 ## Overview
 
 This application helps answer a critical question in environmental economics: **What price per ton of CO2 would make preserving Amazon rainforest more profitable than clearing it for agriculture?**
