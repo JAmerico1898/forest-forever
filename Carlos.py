@@ -225,9 +225,9 @@ def main():
     with col2:
         soy_mean = st.slider(
             f"Average Soybean Revenue ({format_currency(1000)[0:3]}/hectare/year)",
-            min_value=500 if not use_usd else 500/exchange_rate,
-            max_value=3000 if not use_usd else 3000/exchange_rate,
-            value=1200 if not use_usd else 1200/exchange_rate,
+            min_value=3000 if not use_usd else 500/exchange_rate,
+            max_value=10000 if not use_usd else 3000/exchange_rate,
+            value=6100 if not use_usd else 1200/exchange_rate,
             step=50 if not use_usd else 50/exchange_rate,
             help="Mean annual revenue from soybean farming"
         )
