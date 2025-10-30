@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 class CarbonCreditSimulation:
-    def __init__(self, num_simulations=10000, discount_rate=0.08, time_horizon=30):
+    def __init__(self, num_simulations=100000, discount_rate=0.08, time_horizon=30):
         self.num_simulations = num_simulations
         
         # Constants
@@ -60,8 +60,8 @@ class CarbonCreditSimulation:
     def find_equilibrium_carbon_prices(self, conventional_npvs):
         """Find carbon credit prices that make conservation competitive"""
         # Calculate required annual carbon credit revenue
-        stock_credit_prices = np.linspace(0, 500, 100)  # Test range for stock credits
-        flow_credit_prices = np.linspace(0, 500, 100)   # Test range for flow credits
+        stock_credit_prices = np.linspace(0, 1000, 100)  # Test range for stock credits
+        flow_credit_prices = np.linspace(0, 1000, 100)   # Test range for flow credits
         
         equilibrium_prices = []
         
@@ -136,7 +136,7 @@ def main():
             "Exchange Rate (R$/US$)",
             min_value=1.00,
             max_value=10.00,
-            value=6.00,
+            value=5.50,
             step=0.05,
             help="Exchange rate for converting Brazilian Reais to US Dollars"
         )
@@ -248,8 +248,8 @@ def main():
         num_simulations = st.slider(
             "Number of Simulations",
             min_value=1000,
-            max_value=20000,
-            value=10000,
+            max_value=200000,
+            value=100000,
             step=1000,
             help="More simulations increase accuracy but take longer"
         )
@@ -285,8 +285,8 @@ def main():
     with col2:
         st.metric(
             label="Stock Credit Price (Total)",
-            value=format_currency(results['recommended_stock_price']) + "/tCO2",
-            delta=format_currency(annual_stock_price) + "/tCO2/year",
+            value=format_currency(results['recommended_stock_price']) + "/tCO2-ha",
+            delta=format_currency(annual_stock_price) + "/tCO2-ha-year",
             delta_color="off",
             help="Total price and annualized equivalent over 30 years"
         )
@@ -294,7 +294,7 @@ def main():
     with col3:
         st.metric(
             label="Flow Credit Price (Annual)",
-            value=format_currency(annual_flow_price) + "/tCO2/year",
+            value=format_currency(annual_flow_price) + "/tCO2-ha-year",
             help="Price for annually sequestered carbon"
         )
     
@@ -432,5 +432,4 @@ def main():
     )
 
 if __name__ == "__main__":
-
     main()
