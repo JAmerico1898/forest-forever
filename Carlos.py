@@ -10,8 +10,8 @@ class CarbonCreditSimulation:
         self.num_simulations = num_simulations
         
         # Constants
-        self.CARBON_STOCK = 155  # tons/hectare
-        self.ANNUAL_ABSORPTION = 0.5  # tons/hectare/year
+        self.CARBON_STOCK = 569  # tons/hectare
+        self.ANNUAL_ABSORPTION = 9.5  # tons/hectare/year
         self.DISCOUNT_RATE = discount_rate
         self.TIME_HORIZON = time_horizon
         
@@ -432,4 +432,5 @@ def main():
     )
 
 if __name__ == "__main__":
+
     main()
