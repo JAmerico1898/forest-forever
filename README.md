@@ -25,8 +25,8 @@ The simulator uses financial modeling to compare the Net Present Value (NPV) of:
 ## Scientific Basis
 
 The model incorporates realistic Amazon rainforest parameters:
-- **Carbon Stock**: 569 tons CO2/hectare (existing forest carbon)
-- **Annual Absorption**: 9.5 tons CO2/hectare/year (sequestration rate)
+- **Carbon Stock**: 155 tons CO2/hectare (existing forest carbon)
+- **Annual Absorption**: 0.5 tons CO2/hectare/year (sequestration rate)
 - **Time Horizon**: 10-50 years (default: 30 years)
 - **Discount Rate**: 1-20% (default: 8%)
 
