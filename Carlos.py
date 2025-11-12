@@ -433,3 +433,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Footer
+st.divider()
+
+st.markdown(
+    """
+    <div style='text-align: center;'>
+        <p style='font-size: 0.9em; color: gray;'>
+            © 2025 Carbon Credit Price Simulator | Developed for applied research purposes
+        </p>
+        <p style='font-size: 0.9em; color: gray;'>
+            Carlos Gomes Filho – Coppead
+        <p style='font-size: 0.9em; color: gray;'>
+            Prof. José Américo Antunes – Coppead
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
