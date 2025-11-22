@@ -10,8 +10,8 @@ class CarbonCreditSimulation:
         self.num_simulations = num_simulations
         
         # Constants
-        self.CARBON_STOCK = 569  # tons/hectare
-        self.ANNUAL_ABSORPTION = 9.5  # tons/hectare/year
+        self.CARBON_STOCK = 568  # tCO2/ha
+        self.ANNUAL_ABSORPTION = 9.5  # tCO2/ha/year
         self.DISCOUNT_RATE = discount_rate
         self.TIME_HORIZON = time_horizon
         
@@ -59,33 +59,35 @@ class CarbonCreditSimulation:
     
     def find_equilibrium_carbon_prices(self, conventional_npvs):
         """Find carbon credit prices that make conservation competitive"""
-        # Calculate required annual carbon credit revenue
-        stock_credit_prices = np.linspace(0, 1000, 100)  # Test range for stock credits
-        flow_credit_prices = np.linspace(0, 1000, 100)   # Test range for flow credits
+        
+        p75 = np.percentile(conventional_npvs, 75)
+        
+        years = np.arange(self.TIME_HORIZON)
+        discount_factors = 1 / (1 + self.DISCOUNT_RATE) ** years
+        pv_annuity_factor = np.sum(discount_factors[1:])
+        pv_annuity_factor += 1 / (1 + self.DISCOUNT_RATE) ** self.TIME_HORIZON  # Add this line to include year 30
+        
+        stock_coefficient = self.CARBON_STOCK
+        flow_coefficient = self.ANNUAL_ABSORPTION * pv_annuity_factor
+        
+        max_stock_price = (p75 * 1.5) / stock_coefficient
+        stock_prices = np.linspace(0, max_stock_price, 200)
         
         equilibrium_prices = []
         
-        for stock_price in stock_credit_prices:
-            for flow_price in flow_credit_prices:
-                # Calculate conservation NPV
-                conservation_cash_flows = np.zeros(self.TIME_HORIZON)
+        for stock_price in stock_prices:
+            stock_contribution = stock_coefficient * stock_price
+            remaining_npv = p75 - stock_contribution
+            
+            if remaining_npv >= 0:
+                flow_price = remaining_npv / flow_coefficient
+                conservation_npv = stock_contribution + flow_coefficient * flow_price
                 
-                # One-time payment for existing carbon stock
-                conservation_cash_flows[0] = self.CARBON_STOCK * stock_price
-                
-                # Annual payments for carbon absorption
-                annual_credit_revenue = self.ANNUAL_ABSORPTION * flow_price
-                conservation_cash_flows[1:] = annual_credit_revenue
-                
-                conservation_npv = self.calculate_npv(conservation_cash_flows)
-                
-                # Check if this price combination makes conservation competitive
-                if conservation_npv >= np.percentile(conventional_npvs, 75):
-                    equilibrium_prices.append({
-                        'stock_price': stock_price,
-                        'flow_price': flow_price,
-                        'conservation_npv': conservation_npv
-                    })
+                equilibrium_prices.append({
+                    'stock_price': stock_price,
+                    'flow_price': flow_price,
+                    'conservation_npv': conservation_npv
+                })
         
         return pd.DataFrame(equilibrium_prices)
     
@@ -99,15 +101,20 @@ class CarbonCreditSimulation:
         
         # Find equilibrium carbon credit prices
         equilibrium_prices = self.find_equilibrium_carbon_prices(conventional_npvs)
-        
+
+        # Escolher ponto onde Stock ≈ Flow (mais intuitivo)
+        price_diff = abs(equilibrium_prices['stock_price'] - 
+                        equilibrium_prices['flow_price'])
+        min_diff_idx = price_diff.idxmin()
+
         # Calculate summary statistics
         results = {
             'conventional_npv_mean': np.mean(conventional_npvs),
             'conventional_npv_p75': np.percentile(conventional_npvs, 75),
             'min_stock_price': equilibrium_prices['stock_price'].min(),
             'min_flow_price': equilibrium_prices['flow_price'].min(),
-            'recommended_stock_price': equilibrium_prices['stock_price'].median(),
-            'recommended_flow_price': equilibrium_prices['flow_price'].median()
+            'recommended_stock_price': equilibrium_prices.loc[min_diff_idx, 'stock_price'],
+            'recommended_flow_price': equilibrium_prices.loc[min_diff_idx, 'flow_price']
         }
         
         return results, equilibrium_prices, conventional_npvs
@@ -183,7 +190,7 @@ def main():
         
         include_timber = st.toggle(
             "Include Timber Extraction",
-            value=True,
+            value=False,
             help="Toggle whether to include one-time timber revenue in the analysis"
         )
         
@@ -193,7 +200,7 @@ def main():
                 f"Timber Value ({format_currency(1000)[0:3]}/hectare)",
                 min_value=1000 if not use_usd else 1000/exchange_rate,
                 max_value=10000 if not use_usd else 10000/exchange_rate,
-                value=5000 if not use_usd else 5000/exchange_rate,
+                value=4800 if not use_usd else 5000/exchange_rate,
                 step=100 if not use_usd else 100/exchange_rate,
                 help="One-time revenue from timber extraction"
             )
@@ -203,8 +210,8 @@ def main():
         cattle_mean = st.slider(
             f"Average Cattle Revenue ({format_currency(1000)[0:3]}/hectare/year)",
             min_value=200 if not use_usd else 200/exchange_rate,
-            max_value=2000 if not use_usd else 2000/exchange_rate,
-            value=800 if not use_usd else 800/exchange_rate,
+            max_value=2500 if not use_usd else 2000/exchange_rate,
+            value=1500 if not use_usd else 800/exchange_rate,
             step=50 if not use_usd else 50/exchange_rate,
             help="Mean annual revenue from cattle ranching"
         )
@@ -238,7 +245,7 @@ def main():
             f"Soybean Revenue Std Dev ({format_currency(1000)[0:3]}/hectare/year)",
             min_value=100 if not use_usd else 100/exchange_rate,
             max_value=1000 if not use_usd else 1000/exchange_rate,
-            value=300 if not use_usd else 300/exchange_rate,
+            value=225 if not use_usd else 300/exchange_rate,
             step=25 if not use_usd else 25/exchange_rate,
             help="Standard deviation of annual soybean revenues"
         )
@@ -249,7 +256,7 @@ def main():
             "Number of Simulations",
             min_value=1000,
             max_value=200000,
-            value=100000,
+            value=10000,
             step=1000,
             help="More simulations increase accuracy but take longer"
         )
@@ -279,23 +286,33 @@ def main():
     with col1:
         st.metric(
             label="Conventional Use NPV (Mean)",
-            value=format_currency(results['conventional_npv_mean']) + "/ha"
-        )
+            value=format_currency(results['conventional_npv_mean']) + "/ha",
+            delta=(
+                f"{format_currency(results['conventional_npv_mean'] * discount_rate * (1 + discount_rate) ** time_horizon / ((1 + discount_rate) ** time_horizon - 1))}/ha-ano"),
+            delta_color="off",
+            help="NPV of conventional use and Annualized equivalent over 30 years per ha "
+            )
     
     with col2:
         st.metric(
             label="Stock Credit Price (Total)",
-            value=format_currency(results['recommended_stock_price']) + "/tCO2-ha",
-            delta=format_currency(annual_stock_price) + "/tCO2-ha-year",
-            delta_color="off",
-            help="Total price and annualized equivalent over 30 years"
+            value=f"{format_currency(results['recommended_stock_price'])}/tCO2",
+            delta=(
+                f"{format_currency(annual_stock_price*sim.CARBON_STOCK)}/ha-year, or\n"
+                f"{format_currency(results['recommended_stock_price']*sim.CARBON_STOCK)}/ha"
+            ),
+            help="Annualized equivalent over 30 years per tCO2-ha, per ha, and total per ha"
         )
     
     with col3:
         st.metric(
             label="Flow Credit Price (Annual)",
-            value=format_currency(annual_flow_price) + "/tCO2-ha-year",
-            help="Price for annually sequestered carbon"
+            value=format_currency(annual_flow_price) + "/tCO2-year",
+            delta=(
+                f"{format_currency(annual_flow_price*sim.ANNUAL_ABSORPTION)}/ha-year, or\n"
+                f"{format_currency((annual_flow_price*sim.ANNUAL_ABSORPTION) * (1 - (1 + discount_rate)**(-time_horizon)) / discount_rate)}/ha"
+            ),
+            help="Price for annually sequestered per tCO2-ha, and per ha"
         )
     
     # Additional explanation
@@ -368,7 +385,7 @@ def main():
         showlegend=True,
         legend=dict(
             yanchor="top",
-            y=0.99,
+            y=0.50,
             xanchor="left",
             x=0.01,
             bgcolor="rgba(255, 255, 255, 0.8)",
@@ -386,7 +403,7 @@ def main():
     fig2.add_annotation(
         text="Each point represents a combination of prices<br>that makes conservation competitive",
         xref="paper", yref="paper",
-        x=0.02, y=0.98,
+        x=0.98, y=0.98,
         showarrow=False,
         bgcolor="white",
         bordercolor="black",
@@ -399,8 +416,7 @@ def main():
     st.subheader("Financial Summary")
     
     # Calculate annual equivalent values
-    conservation_annual = results['recommended_stock_price'] * sim.CARBON_STOCK / time_horizon + \
-                        results['recommended_flow_price'] * sim.ANNUAL_ABSORPTION
+    conservation_annual = annual_stock_price*sim.CARBON_STOCK + annual_flow_price*sim.ANNUAL_ABSORPTION
     
     conventional_annual = results['conventional_npv_mean'] * discount_rate * \
                         (1 + discount_rate) ** time_horizon / ((1 + discount_rate) ** time_horizon - 1)
